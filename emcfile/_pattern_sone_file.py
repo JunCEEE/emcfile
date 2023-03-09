@@ -3,10 +3,11 @@ import os
 from io import BufferedReader
 from pathlib import Path
 from typing import Union, overload
+from typing import List
 
 import h5py
 import numpy as np
-import numpy.typing as npt
+
 
 from ._h5helper import H5Path, h5path, make_path
 from ._pattern_sone import PatternsSOne
@@ -17,7 +18,7 @@ _log = logging.getLogger(__name__)
 I4 = np.dtype("i4").itemsize
 
 
-def concat_continous(a: npt.NDArray) -> npt.NDArray:
+def concat_continous(a )  :
     """
     Example
         input [0, 1, 3, 4, 6]
@@ -36,8 +37,8 @@ def concat_continous(a: npt.NDArray) -> npt.NDArray:
 
 
 def read_indexed_array(
-    fin: BufferedReader, idx_con: npt.NDArray, arr_idx: npt.NDArray, e0: int
-) -> tuple[npt.NDArray, int]:
+    fin , idx_con , arr_idx , e0 
+)   :
     if len(idx_con) == 1:
         s, e = idx_con[0]
         e = arr_idx[e]
@@ -61,8 +62,8 @@ def read_indexed_array(
 
 
 def read_patterns(
-    fn: Path, idx_con: npt.NDArray, ones_idx: npt.NDArray, multi_idx: npt.NDArray
-) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+    fn , idx_con , ones_idx , multi_idx 
+)    :
     seek_start = PatternsSOneEMC.HEADER_BYTES + I4 * (len(ones_idx) - 1) * 2
     with fn.open("rb") as fin:
         fin.seek(seek_start)
@@ -89,15 +90,15 @@ def read_patterns(
 
 
 class PatternsSOneFile:
-    ones: npt.NDArray[np.int32]
-    multi: npt.NDArray[np.int32]
-    place_ones: npt.NDArray[np.int32]
-    place_multi: npt.NDArray[np.int32]
-    count_multi: npt.NDArray[np.int32]
-    num_data: int
-    num_pix: int
+    #ones: List[np.int32]
+    #multi: List[np.int32]
+    #place_ones: List[np.int32]
+    #place_multi: List[np.int32]
+    #count_multi: List[np.int32]
+    #num_data: int
+    #num_pix: int
 
-    def sparsity(self) -> float:
+    def sparsity(self)  :
         nbytes = (
             self.ones.nbytes
             + self.multi.nbytes
@@ -106,21 +107,21 @@ class PatternsSOneFile:
         return nbytes / (4 * self.num_data * self.num_pix)
 
     def _read_patterns(
-        self, idx_con: npt.NDArray
-    ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+        self, idx_con 
+    )    :
         raise NotImplementedError()
 
     @overload
-    def __getitem__(self, idx: Union[int, np.integer]) -> npt.NDArray:
+    def __getitem__(self, idx  )  :
         ...
 
     @overload
-    def __getitem__(self, idx: Union[slice, npt.NDArray]) -> PatternsSOne:
+    def __getitem__(self, idx  )  :
         ...
 
     def __getitem__(
-        self, idx: Union[int, np.integer, slice, npt.NDArray]
-    ) -> Union[npt.NDArray, PatternsSOne]:
+        self, idx    
+    )   :
         if isinstance(idx, (int, np.integer)):
             idx_con = np.array([[idx, idx + 1]])
             ans = np.zeros(self.num_pix, np.int32)
@@ -153,7 +154,7 @@ class PatternsSOneFile:
 class PatternsSOneEMC(PatternsSOneFile):
     HEADER_BYTES = 1024
 
-    def __init__(self, fn: Union[str, Path]):
+    def __init__(self, fn  ):
         self._fn = Path(fn)
         with open(self._fn, "rb") as fin:
             self.num_data = np.fromfile(fin, dtype=np.int32, count=1)[0]
@@ -169,14 +170,14 @@ class PatternsSOneEMC(PatternsSOneFile):
         self.shape = (self.num_data, self.num_pix)
 
     def _read_patterns(
-        self, idx_con: npt.NDArray
-    ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+        self, idx_con 
+    )    :
         return read_patterns(self._fn, idx_con, self.ones_idx, self.multi_idx)
 
 
 def read_indexed_array_h5(
-    fin: Union[h5py.File, h5py.Group], idx_con: npt.NDArray, arr_idx: npt.NDArray
-) -> npt.NDArray:
+    fin  , idx_con , arr_idx 
+)  :
     if len(idx_con) == 1:
         s, e = idx_con[0]
         e = arr_idx[e]
@@ -192,8 +193,8 @@ def read_indexed_array_h5(
 
 
 def read_patterns_h5(
-    fn: H5Path, idx_con: npt.NDArray, ones_idx: npt.NDArray, multi_idx: npt.NDArray
-) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+    fn , idx_con , ones_idx , multi_idx 
+)    :
     with fn.open_group() as (_, gp):
         place_ones = read_indexed_array_h5(gp["place_ones"], idx_con, ones_idx)
         place_multi = read_indexed_array_h5(gp["place_multi"], idx_con, multi_idx)
@@ -202,7 +203,7 @@ def read_patterns_h5(
 
 
 class PatternsSOneH5(PatternsSOneFile):
-    def __init__(self, fn: Union[str, H5Path]):
+    def __init__(self, fn  ):
         self._fn = h5path(fn)
         with self._fn.open_group() as (_, gp):
             self.num_data = gp.attrs["num_data"]
@@ -217,12 +218,12 @@ class PatternsSOneH5(PatternsSOneFile):
         self.shape = (self.num_data, self.num_pix)
 
     def _read_patterns(
-        self, idx_con: npt.NDArray
-    ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+        self, idx_con 
+    )    :
         return read_patterns_h5(self._fn, idx_con, self.ones_idx, self.multi_idx)
 
 
-def file_patterns(fn: Union[str, Path, H5Path]) -> PatternsSOneFile:
+def file_patterns(fn   )  :
     p = make_path(fn)
     if isinstance(p, H5Path):
         return PatternsSOneH5(p)

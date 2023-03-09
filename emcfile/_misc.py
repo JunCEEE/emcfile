@@ -1,7 +1,7 @@
 _units = ["B", "KB", "MB", "GB", "TB", "PB"]
 
 
-def pretty_size(s: float) -> str:
+def pretty_size(s )  :
     """
     The function convert a size, a number with unit byte, to a string with suitable unit.
 

@@ -1,13 +1,14 @@
-from __future__ import annotations
+
 
 import logging
 from collections import namedtuple
 from pathlib import Path
 from typing import Any, Iterable, Optional, Tuple, Union, cast
+from typing import List
 
 import h5py
 import numpy as np
-import numpy.typing as npt
+
 from scipy.sparse import csr_matrix
 
 from ._h5helper import PATH_TYPE, H5Path, check_remove_groups, make_path
@@ -35,13 +36,13 @@ class PatternsSOne:
 
     def __init__(
         self,
-        num_pix: int,
-        ones: npt.NDArray,
-        multi: npt.NDArray,
-        place_ones: npt.NDArray,
-        place_multi: npt.NDArray,
-        count_multi: npt.NDArray,
-    ) -> None:
+        num_pix ,
+        ones ,
+        multi ,
+        place_ones ,
+        place_multi ,
+        count_multi ,
+    )  :
         self.ndim = 2
         self.num_pix = num_pix
         self.ones = ones
@@ -51,13 +52,13 @@ class PatternsSOne:
         self.count_multi = count_multi
         self.update_idx()
 
-    def update_idx(self) -> None:
+    def update_idx(self)  :
         self.ones_idx = np.zeros(self.num_data + 1, dtype="u8")
         np.cumsum(self.ones, out=self.ones_idx[1:])
         self.multi_idx = np.zeros(self.num_data + 1, dtype="u8")
         np.cumsum(self.multi, out=self.multi_idx[1:])
 
-    def check(self) -> bool:
+    def check(self)  :
         if self.num_data != len(self.multi):
             raise Exception(
                 f"The `multi`{len(self.multi)} has different length with `ones`({self.num_data})"
@@ -80,10 +81,10 @@ class PatternsSOne:
             )
         return True
 
-    def __len__(self) -> int:
+    def __len__(self)  :
         return self.num_data
 
-    def sparse_pattern(self, idx: int) -> SPARSE_PATTERN:
+    def sparse_pattern(self, idx )  :
         return SPARSE_PATTERN(
             self.place_ones[self.ones_idx[idx] : self.ones_idx[idx + 1]],
             self.place_multi[self.multi_idx[idx] : self.multi_idx[idx + 1]],
@@ -91,17 +92,17 @@ class PatternsSOne:
         )
 
     @property
-    def num_data(self) -> int:
+    def num_data(self)  :
         return len(self.ones)
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self)   :
         return self.num_data, self.num_pix
 
-    def get_mean_count(self) -> float:
+    def get_mean_count(self)  :
         return cast(int, self.sum()) / self.num_data
 
-    def __repr__(self) -> str:
+    def __repr__(self)  :
         return f"""Pattern(1-sparse) <{hex(id(self))}>
   Number of patterns: {self.num_data}
   Number of pixels: {self.num_pix}
@@ -111,13 +112,13 @@ class PatternsSOne:
 """
 
     @property
-    def nbytes(self) -> int:
+    def nbytes(self)  :
         return int(np.sum([getattr(self, i).nbytes for i in PatternsSOne.ATTRS]))
 
-    def sparsity(self) -> float:
+    def sparsity(self)  :
         return self.nbytes / (4 * self.num_data * self.num_pix)
 
-    def __eq__(self, d: object) -> bool:
+    def __eq__(self, d )  :
         if not isinstance(d, PatternsSOne):
             return NotImplemented
         if self.num_data != d.num_data:
@@ -129,7 +130,7 @@ class PatternsSOne:
                 return False
         return True
 
-    def _get_pattern(self, idx: int) -> npt.NDArray:
+    def _get_pattern(self, idx )  :
         if idx >= self.num_data or idx < 0:
             raise IndexError(f"{idx}")
         pattern = np.zeros(self.num_pix, "uint32")
@@ -138,7 +139,7 @@ class PatternsSOne:
         pattern[self.place_multi[r]] = self.count_multi[r]
         return pattern
 
-    def _get_subdataset(self, idx: Any) -> PatternsSOne:
+    def _get_subdataset(self, idx )  :
         so = self._get_sparse_ones().__getitem__(*idx)
         sm = self._get_sparse_multi().__getitem__(*idx)
         ones = so.indptr[1:] - so.indptr[:-1]
@@ -153,12 +154,12 @@ class PatternsSOne:
         )
 
     def sum(
-        self, axis: Optional[int] = None, keepdims: bool = False
-    ) -> Union[npt.NDArray, int]:
+        self, axis  = None, keepdims  = False
+    )   :
         if axis is None:
             return len(self.place_ones) + cast(int, np.sum(self.count_multi))
         elif axis == 1:
-            ans: npt.NDArray = self.ones + np.squeeze(
+            ans  = self.ones + np.squeeze(
                 np.asarray(self._get_sparse_multi().sum(axis=1))
             )
             return ans[:, None] if keepdims else ans
@@ -168,7 +169,7 @@ class PatternsSOne:
             return ans[None, :] if keepdims else ans
         raise ValueError(f"Do not support axis={axis}.")
 
-    def __getitem__(self, *idx: Any) -> Union[PatternsSOne, npt.NDArray]:
+    def __getitem__(self, *idx )   :
         if len(idx) == 1 and isinstance(idx[0], (int, np.integer)):
             return self._get_pattern(int(idx[0]))
         else:
@@ -176,31 +177,31 @@ class PatternsSOne:
 
     def write(
         self,
-        path: PATH_TYPE,
+        path ,
         *,
-        h5version: str = "2",
-        overwrite: bool = False,
-    ) -> None:
+        h5version  = "2",
+        overwrite  = False,
+    )  :
         return write_patterns([self], path, h5version=h5version, overwrite=overwrite)
 
-    def _get_sparse_ones(self) -> csr_matrix:
+    def _get_sparse_ones(self)  :
         _one = np.ones(1, "i4")
         _one = np.lib.stride_tricks.as_strided(  # type: ignore
             _one, shape=(self.place_ones.shape[0],), strides=(0,)
         )
         return csr_matrix((_one, self.place_ones, self.ones_idx), shape=self.shape)
 
-    def _get_sparse_multi(self) -> csr_matrix:
+    def _get_sparse_multi(self)  :
         return csr_matrix(
             (self.count_multi, self.place_multi, self.multi_idx), shape=self.shape
         )
 
-    def todense(self) -> npt.NDArray[np.int32]:
+    def todense(self)  :
         """
         To dense ndarray
         """
         return cast(
-            npt.NDArray[np.int32],
+            List[np.int32],
             np.squeeze(
                 self._get_sparse_ones().todense() + self._get_sparse_multi().todense()
             ),
@@ -209,7 +210,7 @@ class PatternsSOne:
     def __array__(self):
         return self.todense()
 
-    def __matmul__(self, mtx: npt.ArrayLike) -> npt.NDArray:
+    def __matmul__(self, mtx )  :
         return self._get_sparse_ones() * mtx + self._get_sparse_multi() * mtx
 
     def __array_function__(self, func, types, args, kwargs):
@@ -238,8 +239,8 @@ def implements(np_function):
 
 
 def iter_array_buffer(
-    datas: list[PatternsSOne], buffer_size: int, g: str
-) -> Iterable[npt.NDArray]:
+    datas , buffer_size , g 
+)  :
     buffer = []
     nbytes = 0
     for a in datas:
@@ -261,7 +262,7 @@ def iter_array_buffer(
             yield np.concatenate(buffer)
 
 
-def _write_bin(datas: list[PatternsSOne], path: Path, overwrite: bool) -> None:
+def _write_bin(datas , path , overwrite )  :
     if path.exists() and not overwrite:
         raise Exception(f"{path} exists")
     num_data = np.sum([data.num_data for data in datas])
@@ -276,8 +277,8 @@ def _write_bin(datas: list[PatternsSOne], path: Path, overwrite: bool) -> None:
 
 
 def _write_h5_v2(
-    datas: list[PatternsSOne], path: H5Path, overwrite: bool, buffer_size: int
-) -> None:
+    datas , path , overwrite , buffer_size 
+)  :
     num_ones = np.sum([d.ones.sum() for d in datas])
     num_multi = np.sum([d.multi.sum() for d in datas])
     num_data = np.sum([data.num_data for data in datas])
@@ -302,13 +303,13 @@ def _write_h5_v2(
 
 
 def write_patterns(
-    datas: list[PatternsSOne],
-    path: PATH_TYPE,
+    datas ,
+    path ,
     *,
-    h5version: str = "2",
-    overwrite: bool = False,
-    buffer_size: int = 1073741824,  # 2 ** 30 bytes = 1 GB
-) -> None:
+    h5version  = "2",
+    overwrite  = False,
+    buffer_size  = 1073741824,  # 2 ** 30 bytes = 1 GB
+)  :
     # TODO: performance test
     f = make_path(path)
     if isinstance(f, Path):
@@ -327,12 +328,12 @@ def write_patterns(
 
 
 def _write_h5_v1(
-    data: PatternsSOne,
-    path: H5Path,
-    overwrite: bool,
-    start: int = 0,
-    end: Optional[int] = None,
-) -> None:
+    data ,
+    path ,
+    overwrite ,
+    start  = 0,
+    end  = None,
+)  :
     dt = h5py.special_dtype(vlen=np.int32)
     with path.open_group("a", "a") as (_, fp):
         check_remove_groups(
@@ -364,8 +365,8 @@ def _write_h5_v1(
 
 @implements(np.concatenate)
 def concatenate_PatternsSOne(
-    patterns_l: list[PatternsSOne], casting="safe"
-) -> PatternsSOne:
+    patterns_l , casting="safe"
+)  :
     "stack pattern sets together"
     num_pix = patterns_l[0].num_pix
     for d in patterns_l:

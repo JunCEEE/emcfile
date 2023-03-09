@@ -1,12 +1,13 @@
-from __future__ import annotations
+
 
 import logging
 from collections import namedtuple
 from pathlib import Path
 from typing import Any, Union
+from typing import List
 
 import numpy as np
-import numpy.typing as npt
+
 from beartype import beartype
 from scipy.sparse import coo_matrix
 
@@ -26,19 +27,19 @@ PATTENS_TYPE = tuple[
     int,
     tuple[int, int],
     int,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
+    List,
+    List,
+    List,
+    List,
+    List,
 ]
 
 
 def _get_start_end(
-    num_data: int,
-    start: Union[None, int, np.integer],
-    end: Union[None, int, np.integer],
-) -> tuple[int, int]:
+    num_data ,
+    start   ,
+    end   ,
+)   :
     if start is not None and end is not None:
         return int(start), int(end)
     start = 0 if start is None else start
@@ -47,16 +48,16 @@ def _get_start_end(
 
 
 def _parse_h5_PatternsSOne_v2(
-    path: H5Path, start: Union[None, int, np.integer], end: Union[None, int, np.integer]
-) -> tuple[int, tuple[int, int], PatternsSOne]:
+    path , start   , end   
+)     :
     file = PatternsSOneH5(path)
     start, end = _get_start_end(file.num_data, start, end)
     return file.num_data, (start, end), file[start:end]
 
 
 def _parse_h5_PatternsSOne_v1(
-    path: H5Path, start: Union[None, int, np.integer], end: Union[None, int, np.integer]
-) -> PATTENS_TYPE:
+    path , start   , end   
+)  :
     with path.open_group("r", "r") as (_, fp):
         num_data = len(fp["place_ones"])
         start, end = _get_start_end(num_data, start, end)
@@ -82,8 +83,8 @@ def _parse_h5_PatternsSOne_v1(
 
 
 def _parse_bin_PatternsSOne(
-    path: Path, start: Union[None, int, np.integer], end: Union[None, int, np.integer]
-) -> tuple[int, tuple[int, int], PatternsSOne]:
+    path , start   , end   
+)     :
     file = PatternsSOneEMC(path)
     start, end = _get_start_end(file.num_data, start, end)
     return file.num_data, (start, end), file[start:end]
@@ -95,9 +96,9 @@ PATTERNS_HEADER = namedtuple(
 
 
 def patterns_header(
-    filename: PATH_TYPE,
-) -> PATTERNS_HEADER:
-    header: dict[str, Any] = {"file": str(filename)}
+    filename ,
+)  :
+    header   = {"file": str(filename)}
     f = make_path(filename)
     if isinstance(f, H5Path):
         with f.open_group("r", "r") as (_, fp):
@@ -119,10 +120,10 @@ def patterns_header(
 
 
 def _parse_file_PatternsSOne(
-    path: Union[str, Path, H5Path],
-    start: Union[None, int, np.integer] = None,
-    end: Union[None, int, np.integer] = None,
-) -> PatternsSOne:
+    path   ,
+    start    = None,
+    end    = None,
+)  :
     f = make_path(path)
     if isinstance(f, H5Path):
 
@@ -141,7 +142,7 @@ def _parse_file_PatternsSOne(
     return dataset
 
 
-def dense_to_PatternsSOne(arr: npt.NDArray) -> PatternsSOne:
+def dense_to_PatternsSOne(arr )  :
     idx = arr == 1
     ones = idx.sum(axis=1)
     place_ones = idx.nonzero()[1]
@@ -160,7 +161,7 @@ def dense_to_PatternsSOne(arr: npt.NDArray) -> PatternsSOne:
     )
 
 
-def coo_to_SOne_kernel(coo: coo_matrix) -> PatternsSOne:
+def coo_to_SOne_kernel(coo )  :
     coo = coo.copy()
     idx = coo.data == 1
     c = coo_matrix((np.ones(idx.sum(), "i4"), (coo.row[idx], coo.col[idx])), coo.shape)
@@ -180,18 +181,18 @@ def coo_to_SOne_kernel(coo: coo_matrix) -> PatternsSOne:
 
 @beartype
 def patterns(
-    src: Union[PATH_TYPE, npt.NDArray, coo_matrix, int, np.integer, PatternsSOne],
-    /,
+    src      ,
+    
     *,
-    start: Union[None, int, np.integer] = None,
-    end: Union[None, int, np.integer] = None,
-) -> PatternsSOne:
+    start    = None,
+    end    = None,
+)  :
     """
     The interface function for read pattern set from file or converting from a dense numpy array.
 
     Parameters
     ----------
-    src : Union[PATH_TYPE, npt.NDArray, coo_matrix, int, np.integer, PatternsSOne]
+    src : Union[PATH_TYPE, List, coo_matrix, int, np.integer, PatternsSOne]
         Create a PatternsSOne object from a source file, a dense numpy array, a coo sparse matrix,
         an integer or another `PatternsSOne` file.
 
